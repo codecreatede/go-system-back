@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -38,8 +39,7 @@ var (
 	include         string
 	foriegnaddress  string
 	foriegnpath     string
-	deletedir       bool
-	backupdir       bool
+	backupdir       string
 )
 
 var rootCmd = &cobra.Command{
@@ -54,7 +54,7 @@ var cpCmd = &cobra.Command{
 }
 
 var rsyncCmd = &cobra.Command{
-	Use:  "ryncdir",
+	Use:  "rsyncdir",
 	Long: "recursive syncing of the directories on the host system",
 	Run:  rsyncHost,
 }
@@ -66,7 +66,7 @@ var rsyncArchCmd = &cobra.Command{
 }
 
 var rsyncHostPushCmd = &cobra.Command{
-	Use:  "rynscHostpull",
+	Use:  "rsyncHostpush",
 	Long: "syncing the transfer files from the host to remote",
 	Run:  hostPush,
 }
@@ -85,14 +85,8 @@ var rsyncHostRemoteCmd = &cobra.Command{
 
 var tunnelCmd = &cobra.Command{
 	Use:  "tunnel",
-	Long: "this is establishing a tunneling system and is equivalent to rsync -azP",
+	Long: "this is establishing a tunneling system and is equivalent to rsync -anzP",
 	Run:  tunnelFunc,
-}
-
-var tunnelDCmd = &cobra.Command{
-	Use:  "tunnelD",
-	Long: "establishing a delete tunnel and this is rsync -an --delete",
-	Run:  tunnelDFunc,
 }
 
 func init() {
@@ -126,6 +120,15 @@ func init() {
 		StringVarP(&include, "include these files", "I", "inclusive", "include")
 	rsyncHostPullCmd.Flags().
 		StringVarP(&foriegnaddress, "address of the server", "A", "server address", "ip route")
+	rsyncHostRemoteCmd.Flags().
+		StringVarP(&hostpath, "path on the host", "H", "path to the host folder", "host init directory")
+	rsyncHostRemoteCmd.Flags().
+		StringVarP(&hostdestination, "path to the destination", "D", "destination drive", "destination directory")
+	rsyncHostRemoteCmd.Flags().
+		StringVarP(&backupdir, "backup dir", "B", "backup drive", "backupdrive for tunnel")
+	tunnelCmd.Flags().StringVarP(&hostpath, "hostpath", "O", "path on the host", "host base drive")
+	tunnelCmd.Flags().
+		StringVarP(&hostdestination, "host drive", "S", "drive on the host", "host path to the drive")
 
 	rootCmd.AddCommand(cpCmd)
 	rootCmd.AddCommand(rsyncCmd)
@@ -134,7 +137,6 @@ func init() {
 	rootCmd.AddCommand(rsyncHostPushCmd)
 	rootCmd.AddCommand(rsyncHostRemoteCmd)
 	rootCmd.AddCommand(tunnelCmd)
-	rootCmd.AddCommand(tunnelDCmd)
 }
 
 /*
@@ -142,6 +144,19 @@ func init() {
 	 whether tot ake back up or not and this is reading directly from the remote server or the host server.
 
 */
+
+func dotEnv() (string, string, string) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	installYear := os.Getenv("Year")
+	installTime := os.Getenv("Time")
+	installDate := os.Getenv("Date")
+
+	return installYear, installTime, installDate
+}
 
 func systemBack(cmd *cobra.Command, args []string) {
 	cpout, err := exec.Command("cp", hostpath, hostdestination).Output()
@@ -185,7 +200,24 @@ func hostPull(cmd *cobra.Command, args []string) {
 	fmt.Println(string(hostpullAdd))
 }
 
-func timeCheck(cmd *cobra.Command, args []string) {
+func rsyncEnd(cmd *cobra.Command, args []string) {
+	rsyncend, err := exec.Command("rsync", "-a", "--delete", "--backup-dir=", backupdir, hostpath, hostdestination).
+		Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(rsyncend))
+}
+
+func tunnelFunc(cmd *cobra.Command, args []string) {
+	tunnelAdd, err := exec.Command("rsync", "-anzP", "--delete", hostpath, hostdestination).Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tunnelAdd)
+}
+
+func timeCheck() (string, string, string, string, string) {
 	time := time.Now()
 	writetime := time.String()
 	file, err := os.Create("currenttimefile.txt")
@@ -195,27 +227,11 @@ func timeCheck(cmd *cobra.Command, args []string) {
 	defer file.Close()
 	file.WriteString(writetime + "\n")
 
-	move, err := exec.Command("mv", "currenttimefile.txt", "timeprevious.txt").Output()
+	moveout, err := exec.Command("mv", "currenttimefile.txt", "timeprevious.txt").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("system date and time stage has been moved %s", move)
-	type timeNow struct {
-		yearNow     string
-		dateNow     string
-		yearextNow  string
-		monthextNow string
-		datextNow   string
-	}
-
-	currentNow := []timeNow{}
-	currentNow = append(currentNow, timeNow{
-		yearNow:     strings.Split(writetime, " ")[0],
-		dateNow:     strings.Split(writetime, " ")[1],
-		yearextNow:  strings.Split(string(strings.Split(writetime, " ")[0]), "-")[0],
-		monthextNow: strings.Split(string(strings.Split(writetime, " ")[0]), "-")[1],
-		datextNow:   strings.Split(string(strings.Split(writetime, " ")[0]), "-")[2],
-	})
+	fmt.Println("system date and time stage has been moved %s", moveout)
 
 	type timeDate struct {
 		year     string
@@ -244,11 +260,19 @@ func timeCheck(cmd *cobra.Command, args []string) {
 		})
 	}
 
+	var externalDate string
+	var externalYear string
+	var externalYearExt string
+	var externalMonthExt string
+	var externalDateExt string
+
 	for i := range timeStore {
-		fmt.Println(timeStore[i].year, "\n", timeStore[i].date)
+		externalDate += timeStore[i].date
+		externalYear += timeStore[i].year
+		externalYearExt += timeStore[i].yearext
+		externalMonthExt += timeStore[i].monthext
+		externalDateExt += timeStore[i].dateext
 	}
 
-	for i := range currentNow {
-		fmt.Println(currentNow[i].yearNow, "\n", currentNow[i].dateNow)
-	}
+	return externalDate, externalYear, externalYearExt, externalMonthExt, externalDateExt
 }
