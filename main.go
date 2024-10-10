@@ -8,7 +8,18 @@ Date 2024-10-9
 
 
 a backup utility that is written in golang for the system managment and for the automatic backup
-of the system.
+of the system. the time function is implemented which returns the year and then a dotenv is implemented
+which allows to run this from the time of the installation. You can define the time of the days when you want
+to create a backup and then it will create the backup automatically without you need to remember anything. Your
+doenv file should look like this
+.env
+content
+year = "2024-10-10"
+backup = 10
+
+you can change the backup time to any number of  days while invoking this and then it will automatically check the interval
+and if the system time is not greater than the dotenv file then it will not backup the system and if the system time is
+less than the backup time, then it will not backup the system.
 
 */
 
@@ -18,6 +29,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,84 +152,111 @@ func init() {
 }
 
 /*
-   the time function and the embedded struct and the iter will be called in each function and will evaluate
-	 whether tot ake back up or not and this is reading directly from the remote server or the host server.
-
+added several new functions such as fileTime check and others and now it is calling
+the dotenv and the systemTime and the dotsystemTime function in each of the same and
+if the difference of the date is not greater than 10 then it will not do the back up
+otherwise will do the backup and automatic backup and you dont have to do anything else.
 */
-
-func dotEnv() (string, string, string) {
+func dotEnv() string {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
 	installYear := os.Getenv("Year")
-	installTime := os.Getenv("Time")
-	installDate := os.Getenv("Date")
 
-	return installYear, installTime, installDate
+	return installYear
 }
 
 func systemBack(cmd *cobra.Command, args []string) {
-	cpout, err := exec.Command("cp", hostpath, hostdestination).Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		cpout, err := exec.Command("cp", hostpath, hostdestination).Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(cpout))
 	}
-	fmt.Println(string(cpout))
 }
 
 func rsyncHost(cmd *cobra.Command, args []string) {
-	rsyncerr, err := exec.Command("rsync", "-r", hostpath, hostdestination).Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		rsyncerr, err := exec.Command("rsync", "-r", hostpath, hostdestination).Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(rsyncerr))
 	}
-	fmt.Println(string(rsyncerr))
 }
 
 func rsyncArch(cmd *cobra.Command, args []string) {
-	rsyncArchA, err := exec.Command("rsync", "-az", hostpath, hostdestination).Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		rsyncArchA, err := exec.Command("rsync", "-az", hostpath, hostdestination).Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(rsyncArchA))
 	}
-	fmt.Println(string(rsyncArchA))
 }
 
 func hostPush(cmd *cobra.Command, args []string) {
-	hostpushAdd, err := exec.Command("rsync", "-a", hostpath, foriegnaddress, ":", foriegnpath).
-		Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		hostpushAdd, err := exec.Command("rsync", "-a", hostpath, foriegnaddress, ":", foriegnpath).
+			Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(hostpushAdd))
 	}
-	fmt.Println(string(hostpushAdd))
 }
 
 func hostPull(cmd *cobra.Command, args []string) {
-	hostpullAdd, err := exec.Command("rsync", "-a", foriegnaddress, ":", foriegnpath, hostdestination).
-		Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		hostpullAdd, err := exec.Command("rsync", "-a", foriegnaddress, ":", foriegnpath, hostdestination).
+			Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(hostpullAdd))
 	}
-	fmt.Println(string(hostpullAdd))
 }
 
 func rsyncEnd(cmd *cobra.Command, args []string) {
-	rsyncend, err := exec.Command("rsync", "-a", "--delete", "--backup-dir=", backupdir, hostpath, hostdestination).
-		Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		rsyncend, err := exec.Command("rsync", "-a", "--delete", "--backup-dir=", backupdir, hostpath, hostdestination).
+			Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(rsyncend))
 	}
-	fmt.Println(string(rsyncend))
 }
 
 func tunnelFunc(cmd *cobra.Command, args []string) {
-	tunnelAdd, err := exec.Command("rsync", "-anzP", "--delete", hostpath, hostdestination).Output()
-	if err != nil {
-		log.Fatal(err)
+	yearDot, monthDot, dateDot := dotsystemTime()
+	yearTag, monthTag, dateTag := systemTime()
+	if (yearDot == yearTag) && (monthDot == monthTag) && (dateTag-dateDot > 10) {
+		tunnelAdd, err := exec.Command("rsync", "-anzP", "--delete", hostpath, hostdestination).
+			Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(tunnelAdd)
 	}
-	fmt.Println(tunnelAdd)
 }
 
-func timeCheck() (string, string, string, string, string) {
+func timeCheck() []string {
 	time := time.Now()
 	writetime := time.String()
 	file, err := os.Create("currenttimefile.txt")
@@ -227,22 +266,13 @@ func timeCheck() (string, string, string, string, string) {
 	defer file.Close()
 	file.WriteString(writetime + "\n")
 
-	moveout, err := exec.Command("mv", "currenttimefile.txt", "timeprevious.txt").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("system date and time stage has been moved %s", moveout)
+	year := []string{}
+	date := []string{}
+	yearext := []string{}
+	monthext := []string{}
+	dateext := []string{}
 
-	type timeDate struct {
-		year     string
-		date     string
-		yearext  string
-		monthext string
-		dateext  string
-	}
-
-	timeStore := []timeDate{}
-	fOpen, err := os.Open("timeprevious.txt")
+	fOpen, err := os.Open("currenttimefile.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -251,28 +281,49 @@ func timeCheck() (string, string, string, string, string) {
 
 	for fRead.Scan() {
 		line := fRead.Text()
-		timeStore = append(timeStore, timeDate{
-			year:     strings.Split(string(line), " ")[0],
-			date:     strings.Split(string(line), " ")[1],
-			yearext:  strings.Split(string(strings.Split(string(line), " ")[0]), "-")[0],
-			monthext: strings.Split(string(strings.Split(string(line), " ")[0]), "-")[1],
-			dateext:  strings.Split(string(strings.Split(string(line), " ")[0]), "-")[2],
-		})
+		year = append(year, strings.Split(string(line), " ")[0])
+		date = append(date, strings.Split(string(line), " ")[1])
+		yearext = append(
+			yearext,
+			strings.Split(string(strings.Split(string(line), " ")[0]), "-")[0],
+		)
+		monthext = append(
+			monthext,
+			strings.Split(string(strings.Split(string(line), " ")[0]), "-")[1],
+		)
+		dateext = append(
+			dateext,
+			strings.Split(string(strings.Split(string(line), " ")[0]), "-")[2],
+		)
 	}
 
-	var externalDate string
-	var externalYear string
-	var externalYearExt string
-	var externalMonthExt string
-	var externalDateExt string
+	return year
+}
 
-	for i := range timeStore {
-		externalDate += timeStore[i].date
-		externalYear += timeStore[i].year
-		externalYearExt += timeStore[i].yearext
-		externalMonthExt += timeStore[i].monthext
-		externalDateExt += timeStore[i].dateext
+func dotsystemTime() (int, int, int) {
+	dotYear := dotEnv()
+	var dateD int
+	var monthD int
+	var yearD int
+	dotStore := strings.Split(dotYear, "-")
+	for i := range dotStore {
+		dateD, _ = strconv.Atoi(string(dotStore[i][0]))
+		monthD, _ = strconv.Atoi(string(dotStore[i][1]))
+		yearD, _ = strconv.Atoi(string(dotStore[i][2]))
 	}
+	return dateD, monthD, yearD
+}
 
-	return externalDate, externalYear, externalYearExt, externalMonthExt, externalDateExt
+func systemTime() (int, int, int) {
+	dotStore := timeCheck()
+	var date int
+	var month int
+	var year int
+	for i := range dotStore {
+		dotStore := strings.Split(dotStore[i], "-")
+		date, _ = strconv.Atoi(dotStore[0])
+		month, _ = strconv.Atoi(dotStore[1])
+		year, _ = strconv.Atoi(dotStore[2])
+	}
+	return date, month, year
 }
